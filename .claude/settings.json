@@ -7,8 +7,6 @@
       "Grep(**)"
     ],
     "ask": [
-      "Write(**)",
-      "Edit(**)",
       "Bash(git commit*)",
       "Bash(git push*)"
     ],

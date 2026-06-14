@@ -2,3 +2,15 @@
 .claude/settings.local.json
 # Per-task runtime state (the approval marker)
 .claude/state/
+
+# Maven (backend)
+target/
+
+# Node / frontend build output (also covered by frontend/.gitignore)
+node_modules/
+dist/
+dev-dist/
+*.tsbuildinfo
+
+# Logs
+*.log

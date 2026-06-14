@@ -4,10 +4,51 @@
 > Placeholders marked FILL are completed once by the `/setup` skill (see SETUP-MANIFEST.md).
 
 ## Project overview
-<<<FILL: what this project is, in 2-3 sentences>>>
+A calendar app for Hypixel Skyblock in-game events. There is no official events
+API, so a small set of trusted admins enter events (title, description, category,
+start time stored in UTC, duration, recurrence) through an authenticated admin
+panel; end users browse the calendar in a browser or as an installable Android
+PWA and opt into reminders before chosen events/categories start. The backend is
+a Spring Boot REST API (public read endpoints + admin auth and CRUD); the
+frontend is a React + Vite PWA; reminders use Web Push (VAPID), with best-effort
+local scheduling from synced event data when push is unavailable.
 
 ## Conventions
-<<<FILL: languages, naming, structure, error handling, test style, commit format>>>
+**Layout — monorepo:** the Spring Boot backend is the **root Maven project**
+(`pom.xml` at the repo root; sources under `src/main/java`). The React + Vite PWA
+lives in `frontend/`. Each gate in `.claude/gates.json` fans out to both.
+
+**Backend:** Java 21, Spring Boot 4.x, Maven via the wrapper (`./mvnw`). Base
+package `io.github.pgatzka.calendar`. Format with **Spotless**
+(`spotless:apply` / `spotless:check`); lint / static analysis with **Sonar**
+(`sonar:sonar` — needs a configured SonarQube/SonarCloud host + token).
+
+**Frontend:** TypeScript, React, Vite (`vite-plugin-pwa` / Workbox for the
+service worker + Web Push). Prettier (format), ESLint (lint), `tsc --noEmit`
+(typecheck), Vitest + React Testing Library (test).
+
+**Naming:** Java — PascalCase types, camelCase members, lowercase packages under
+`io.github.pgatzka.calendar`. TypeScript — PascalCase components/types, camelCase
+values, kebab-case filenames for non-components.
+
+**Time & domain:** store all instants in UTC; format to the user's local timezone
+in the client only. Model recurrence with RRULE (RFC 5545) rather than a bespoke
+schema — repeating events are first-class.
+
+**Error handling:** validate at the API boundary; backend returns RFC 7807
+problem-detail responses via `@ControllerAdvice` and never leaks stack traces.
+Frontend surfaces API failures gracefully and degrades (calendar still renders
+from cache when offline).
+
+**Test style (Spring Boot best practice):** tests must fail if the code is wrong.
+Unit + slice tests (`@WebMvcTest`, `@DataJpaTest`, `@SpringBootTest`) run under
+Surefire (`./mvnw test`); integration tests (`*IT`) run under Failsafe during
+`verify`, with a **real database started by `io.fabric8:docker-maven-plugin`**
+around the integration-test phase. Frontend uses Vitest + React Testing Library.
+Cover recurrence expansion and timezone conversion explicitly.
+
+**Commits:** Conventional Commits (`feat:`, `fix:`, `chore:`, …); PRs close their
+issue with `Closes #N`.
 
 ## Gate commands
 The stack-specific commands live in `.claude/gates.json` (the only stack-specific
