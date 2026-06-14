@@ -15,13 +15,28 @@ jobs:
           sh scripts/check-config.sh
 
       # === THE ONE PER-PROJECT BLOCK ===
-      # <<<FILL: toolchain setup for this stack. e.g.
-      #   - uses: actions/setup-node@v4   (with: node-version: 20)  then: run: npm ci
-      #   - uses: actions/setup-python@v5 (with: python-version: '3.12') then: run: pip install -e .[dev]
-      #   - uses: dtolnay/rust-toolchain@stable
-      # Replace this comment with the real steps. Delete if the project needs no toolchain. >>>
+      # Monorepo: Spring Boot (Maven, root pom.xml) backend + React/Vite/TS frontend.
+      # ubuntu-latest provides a Docker daemon for io.fabric8:docker-maven-plugin (real DB in IT).
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install frontend deps
+        working-directory: frontend
+        run: npm ci
 
       - name: Run declared gates (clean machine)
+        # Sonar (the lint gate) needs these; set the SONAR_TOKEN repo secret and sonar.host.url.
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: |
           export CLAUDE_PROJECT_DIR="$PWD"
           . .claude/hooks/_lib.sh
