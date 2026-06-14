@@ -21,7 +21,7 @@
     <java.version>21</java.version>
     <spotless.version>2.44.5</spotless.version>
     <sonar-maven-plugin.version>5.1.0.4751</sonar-maven-plugin.version>
-    <docker-maven-plugin.version>0.46.0</docker-maven-plugin.version>
+    <docker-maven-plugin.version>0.48.1</docker-maven-plugin.version>
     <!-- Sonar is skipped by default; the `sonar` profile (auto-activated when the
          SONAR_TOKEN env var is present) flips this to false. See #9 to wire SonarCloud. -->
     <sonar.skip>true</sonar.skip>
@@ -31,6 +31,30 @@
     <dependency>
       <groupId>org.springframework.boot</groupId>
       <artifactId>spring-boot-starter-web</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-data-jpa</artifactId>
+    </dependency>
+
+    <!-- Spring Boot 4 no longer auto-configures Flyway from flyway-core alone;
+         the starter provides the auto-configuration, and the postgresql module
+         provides PostgreSQL-specific support (Flyway 10+ split DB modules out). -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-flyway</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.flywaydb</groupId>
+      <artifactId>flyway-database-postgresql</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>org.postgresql</groupId>
+      <artifactId>postgresql</artifactId>
+      <scope>runtime</scope>
     </dependency>
 
     <dependency>
@@ -74,6 +98,18 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-failsafe-plugin</artifactId>
+        <configuration>
+          <!-- The dockerized Postgres host/port (see docker-maven-plugin) are handed to the
+               integration tests, which build the JDBC URL via @DynamicPropertySource. -->
+          <systemPropertyVariables>
+            <postgres.host>${docker.host.address}</postgres.host>
+            <postgres.port>${postgres.port}</postgres.port>
+          </systemPropertyVariables>
+          <!-- Run integration tests in a deliberately non-UTC zone, so a zone-less
+               (timestamp instead of timestamptz) mapping would drift and fail the
+               UTC assertions in EventPersistenceIT rather than passing silently. -->
+          <argLine>-Duser.timezone=America/New_York</argLine>
+        </configuration>
         <executions>
           <execution>
             <goals>
@@ -91,11 +127,55 @@
         <version>${sonar-maven-plugin.version}</version>
       </plugin>
 
-      <!-- Declared now; image/run config for the integration-test DB lands in #3/MVP-2. -->
+      <!-- Starts a real Postgres for integration tests (*IT) around the integration-test phase.
+           The dynamic host port is exposed as the Maven property `postgres.port`. -->
       <plugin>
         <groupId>io.fabric8</groupId>
         <artifactId>docker-maven-plugin</artifactId>
         <version>${docker-maven-plugin.version}</version>
+        <configuration>
+          <images>
+            <image>
+              <alias>postgres</alias>
+              <name>postgres:18-alpine</name>
+              <run>
+                <env>
+                  <POSTGRES_DB>calendar</POSTGRES_DB>
+                  <POSTGRES_USER>calendar</POSTGRES_USER>
+                  <POSTGRES_PASSWORD>calendar</POSTGRES_PASSWORD>
+                </env>
+                <ports>
+                  <port>postgres.port:5432</port>
+                </ports>
+                <wait>
+                  <log>database system is ready to accept connections</log>
+                  <tcp>
+                    <ports>
+                      <port>5432</port>
+                    </ports>
+                  </tcp>
+                  <time>60000</time>
+                </wait>
+              </run>
+            </image>
+          </images>
+        </configuration>
+        <executions>
+          <execution>
+            <id>docker-start</id>
+            <phase>pre-integration-test</phase>
+            <goals>
+              <goal>start</goal>
+            </goals>
+          </execution>
+          <execution>
+            <id>docker-stop</id>
+            <phase>post-integration-test</phase>
+            <goals>
+              <goal>stop</goal>
+            </goals>
+          </execution>
+        </executions>
       </plugin>
     </plugins>
   </build>
