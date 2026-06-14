@@ -1,0 +1,8 @@
+{
+  "_comment": "PER-PROJECT. /setup fills each command below, or sets \"\" to skip that gate. Single source of truth for the local hooks AND the CI workflow.",
+  "format": "<<<FILL: format command (auto-fix), or empty string to skip>>>",
+  "lint": "<<<FILL: lint command, or empty string to skip>>>",
+  "typecheck": "<<<FILL: typecheck command, or empty string to skip>>>",
+  "test": "<<<FILL: test command, or empty string to skip>>>",
+  "build": "<<<FILL: build command, or empty string to skip>>>"
+}

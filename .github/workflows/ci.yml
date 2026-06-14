@@ -1,0 +1,31 @@
+name: gates
+"on":
+  push:
+  pull_request:
+
+jobs:
+  gates:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Fail if instance is not configured
+        run: |
+          export CLAUDE_PROJECT_DIR="$PWD"
+          sh scripts/check-config.sh
+
+      # === THE ONE PER-PROJECT BLOCK ===
+      # <<<FILL: toolchain setup for this stack. e.g.
+      #   - uses: actions/setup-node@v4   (with: node-version: 20)  then: run: npm ci
+      #   - uses: actions/setup-python@v5 (with: python-version: '3.12') then: run: pip install -e .[dev]
+      #   - uses: dtolnay/rust-toolchain@stable
+      # Replace this comment with the real steps. Delete if the project needs no toolchain. >>>
+
+      - name: Run declared gates (clean machine)
+        run: |
+          export CLAUDE_PROJECT_DIR="$PWD"
+          . .claude/hooks/_lib.sh
+          # CI runs verification gates only (format is a local auto-fixer).
+          for g in lint typecheck test build; do
+            invoke_gate "$g" || { echo "Gate '$g' failed"; exit 1; }
+          done
